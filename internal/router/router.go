@@ -103,6 +103,7 @@ func Setup(h Handlers, jwtHelper *jwt.JWT, allowedOrigin string) *gin.Engine {
 			sheetGroup.POST("/write", h.Spreadsheet.WriteData)
 			sheetGroup.POST("/append", h.Spreadsheet.AppendData)
 			sheetGroup.POST("/update-cell", h.Spreadsheet.UpdateCell)
+			sheetGroup.POST("/save", h.Spreadsheet.SaveUserSpreadsheet)
 		}
 	}
 

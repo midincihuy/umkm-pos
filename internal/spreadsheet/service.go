@@ -7,6 +7,8 @@ import (
 
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
+	"github.com/google/uuid"
+
 )
 
 type Service struct {
@@ -96,4 +98,73 @@ func (s *Service) UpdateCell(ctx context.Context, sheetName string, cellRange st
 	}
 
 	return nil
+}
+
+// getCellByID mencari baris di sheetName dimana kolom A sama dengan id
+// Mengembalikan index baris (dimulai dari 0) dan error jika ada
+func (s *Service) getCellByID(ctx context.Context, sheetName string, id interface{}) (int, error) {
+	data, err := s.ReadData(ctx, sheetName, "A:C")
+	if err != nil {
+		// Jika tidak ada data, kembalikan error
+		return -1, err
+	}
+
+	// Konversi UUID ke string untuk perbandingan
+	var targetID string
+	switch v := id.(type) {
+	case uuid.UUID:
+		targetID = v.String()
+	case string:
+		targetID = v
+	default:
+		return -1, fmt.Errorf("tipe id tidak didukung: %T", id)
+	}
+
+	for i, row := range data {
+		if len(row) > 0 {
+			// Konversi nilai dari spreadsheet ke string
+			var sheetID string
+			switch cellVal := row[0].(type) {
+			case string:
+				sheetID = cellVal
+			case []byte:
+				sheetID = string(cellVal)
+			default:
+				// Jika bukan string, coba konversi ke string secara umum
+				sheetID = fmt.Sprintf("%v", cellVal)
+			}
+
+			if sheetID == targetID {
+				return i, nil
+			}
+		}
+	}
+
+	// Tidak ditemukan
+	return -1, nil
+}
+
+// SaveUserSpreadsheet menyimpan data spreadsheet user ke sheet Users
+func (s *Service) SaveUserSpreadsheet(ctx context.Context, sheetName string, googleSubID uuid.UUID, email, spreadsheetID string) error {
+	// Cek apakah googleSubID sudah ada
+	rowIndex, err := s.getCellByID(ctx, sheetName, googleSubID)
+	if err != nil {
+		// Jika terjadi error saat membaca data (misal sheet kosong)
+		return s.AppendData(ctx, sheetName, [][]interface{}{
+			{googleSubID, email, spreadsheetID},
+		})
+	}
+
+	if rowIndex != -1 {
+		// Update baris yang ada
+		cellRange := fmt.Sprintf("A%d:C%d", rowIndex+1, rowIndex+1)
+		return s.WriteData(ctx, sheetName, cellRange, [][]interface{}{
+			{googleSubID, email, spreadsheetID},
+		})
+	}
+
+	// Jika tidak ada, tambahkan baris baru
+	return s.AppendData(ctx, sheetName, [][]interface{}{
+		{googleSubID, email, spreadsheetID},
+	})
 }

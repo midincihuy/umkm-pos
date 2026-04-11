@@ -169,20 +169,20 @@ func (j *JWT) ValidateToken(tokenString string) (interface{}, error) {
 
 // ================= HELPER =================
 
-func (j *JWT) GetUserID(tokenString string) (uuid.UUID, error) {
+func (j *JWT) GetUserID(tokenString string) (uuid.UUID, interface{}, error) {
 	claims, err := j.ValidateToken(tokenString)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, nil, err
 	}
 
 	switch c := claims.(type) {
 	case *GoogleClaims:
 		// Buat UUID yang konsisten dari sub Google
-		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), nil
+		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), claims, nil
 	case *GoogleTokenInfo:
 		// Buat UUID yang konsisten dari sub Google
-		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), nil
+		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), claims, nil
 	default:
-		return uuid.Nil, errors.New("unsupported claims type")
+		return uuid.Nil, nil, errors.New("unsupported claims type")
 	}
 }

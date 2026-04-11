@@ -24,7 +24,7 @@ func AuthMiddleware(jwtHelper *jwt.JWT) gin.HandlerFunc {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		userID, err := jwtHelper.GetUserID(tokenString)
+		userID, claims, err := jwtHelper.GetUserID(tokenString)
 		if err != nil {
 			response.Error(c, http.StatusUnauthorized, "Token tidak valid atau sudah expired coy", nil)
 			log.Println(err.Error())
@@ -34,6 +34,7 @@ func AuthMiddleware(jwtHelper *jwt.JWT) gin.HandlerFunc {
 
 		// Set userID ke context — diakses di handler via getUserID(c)
 		c.Set("userID", userID)
+		c.Set("claims", claims)
 		c.Next()
 	}
 }

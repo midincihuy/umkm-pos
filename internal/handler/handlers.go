@@ -23,6 +23,14 @@ func getUserID(c *gin.Context) uuid.UUID {
 	return id.(uuid.UUID)
 }
 
+func getUserClaims(c *gin.Context) (interface{}, error) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		return nil, errors.New("user claims tidak ditemukan di context")
+	}
+	return claims, nil
+}
+
 func parseUUID(c *gin.Context, param string) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param(param))
 	if err != nil {
