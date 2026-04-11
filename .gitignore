@@ -1,0 +1,18 @@
+# Environment
+.env
+
+# Binary
+bin/
+*.exe
+
+# Go
+vendor/
+
+# IDE
+.vscode/
+.idea/
+
+# Air (hot reload)
+tmp/
+
+.*.json
