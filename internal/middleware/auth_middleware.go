@@ -3,15 +3,16 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"umkm-pos/pkg/jwt"
 	"umkm-pos/pkg/response"
 )
 
-// AuthMiddleware memvalidasi JWT yang diterbitkan Supabase Auth.
-// Token dikirim frontend sebagai: Authorization: Bearer <supabase_access_token>
-// User ID diambil dari claim "sub" (UUID standar Supabase).
+// AuthMiddleware memvalidasi JWT yang diterbitkan Google Auth.
+// Token dikirim frontend sebagai: Authorization: Bearer <google_access_token>
+// User ID diambil dari claim "sub" (UUID standar Google).
 func AuthMiddleware(jwtHelper *jwt.JWT) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -25,7 +26,8 @@ func AuthMiddleware(jwtHelper *jwt.JWT) gin.HandlerFunc {
 
 		userID, err := jwtHelper.GetUserID(tokenString)
 		if err != nil {
-			response.Error(c, http.StatusUnauthorized, "Token tidak valid atau sudah expired", nil)
+			response.Error(c, http.StatusUnauthorized, "Token tidak valid atau sudah expired coy", nil)
+			log.Println(err.Error())
 			c.Abort()
 			return
 		}

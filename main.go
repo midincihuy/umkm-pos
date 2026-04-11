@@ -18,8 +18,8 @@ func main() {
 	// 2. Inisialisasi koneksi database
 	db := config.InitDB(cfg)
 
-	// 3. JWT helper — hanya untuk validasi token Supabase
-	jwtHelper, err := jwt.NewJWT(cfg.SupabaseJWKSUrl)
+	// 3. JWT helper — validasi token Google Auth
+	jwtHelper, err := jwt.NewJWT(cfg.GoogleJWKSUrl)
 
 	// 4. Wire: repo → service → handler
 	if err != nil {
@@ -37,7 +37,7 @@ func main() {
 	reportRepo      := repository.NewReportRepo(db)
 
 	// Service layer
-	// Auth service hanya untuk GET/PATCH profil — login/register dihandle Supabase
+	// Auth service hanya untuk GET/PATCH profil — login/register dihandle Google
 	authService     := service.NewAuthService(userRepo)
 	accountService  := service.NewAccountService(accountRepo, transactionRepo, db)
 	categoryService := service.NewCategoryService(categoryRepo)

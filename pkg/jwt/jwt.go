@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,11 +21,24 @@ type JWT struct {
 	publicKeys map[string]*ecdsa.PublicKey
 }
 
-type SupabaseClaims struct {
-	Sub   string `json:"sub"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+type GoogleClaims struct {
+	Sub           string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	GivenName     string `json:"given_name"`
+	FamilyName    string `json:"family_name"`
+	Locale        string `json:"locale"`
 	jwt.RegisteredClaims
+}
+
+
+type GoogleTokenInfo struct {
+	Sub           string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified string `json:"email_verified"`
+	Scope         string `json:"scope"`
 }
 
 func NewJWT(jwksURL string) (*JWT, error) {
@@ -71,7 +85,6 @@ func (j *JWT) refreshKeys() error {
 		yBytes, _ := base64.RawURLEncoding.DecodeString(key.Y)
 
 		pubKey := &ecdsa.PublicKey{
-			// Curve: jwt.SigningMethodES256.Curve,
 			Curve: elliptic.P256(),
 			X:     new(big.Int).SetBytes(xBytes),
 			Y:     new(big.Int).SetBytes(yBytes),
@@ -83,49 +96,75 @@ func (j *JWT) refreshKeys() error {
 	return nil
 }
 
-// ================= JWT VALIDATION =================
+// ================= Validate Google Access Token =================
 
-func (j *JWT) ValidateToken(tokenString string) (*SupabaseClaims, error) {
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&SupabaseClaims{},
-		func(t *jwt.Token) (interface{}, error) {
-
-			if t.Method.Alg() != jwt.SigningMethodES256.Alg() {
-				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-			}
-
-			kid, ok := t.Header["kid"].(string)
-			if !ok {
-				return nil, errors.New("missing kid in token header")
-			}
-
-			key, ok := j.publicKeys[kid]
-			if !ok {
-				// auto refresh kalau key belum ada (rotated key)
-				if err := j.refreshKeys(); err != nil {
-					return nil, err
-				}
-				key, ok = j.publicKeys[kid]
-				if !ok {
-					return nil, errors.New("public key not found for kid")
-				}
-			}
-
-			return key, nil
-		},
-		jwt.WithLeeway(1*time.Minute),
-	)
+func validateGoogleAccessToken(tokenString string) (*GoogleTokenInfo, error) {
+	resp, err := http.Get(fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?access_token=%s", tokenString))
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	claims, ok := token.Claims.(*SupabaseClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("invalid access token")
 	}
 
-	return claims, nil
+	var tokenInfo GoogleTokenInfo
+	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+		return nil, err
+	}
+
+	return &tokenInfo, nil
+}
+
+// ================= JWT VALIDATION =================
+
+func (j *JWT) ValidateToken(tokenString string) (interface{}, error) {
+	// Cek apakah token adalah Google Access Token (opaque ya29.)
+	if strings.HasPrefix(tokenString, "ya29.") {
+		return validateGoogleAccessToken(tokenString)
+	}
+
+	// Cek apakah token adalah JWT (Google ID Token atau Supabase Token)
+	if strings.HasPrefix(tokenString, "ey.") {
+		// Try Google ID Token first
+		claims := &GoogleClaims{}
+		token, err := jwt.ParseWithClaims(
+			tokenString,
+			claims,
+			func(t *jwt.Token) (interface{}, error) {
+				if t.Method.Alg() != jwt.SigningMethodES256.Alg() {
+					return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+				}
+
+				kid, ok := t.Header["kid"].(string)
+				if !ok {
+					return nil, errors.New("missing kid in token header")
+				}
+
+				key, ok := j.publicKeys[kid]
+				if !ok {
+					// auto refresh kalau key belum ada (rotated key)
+					if err := j.refreshKeys(); err != nil {
+						return nil, err
+					}
+					key, ok = j.publicKeys[kid]
+					if !ok {
+						return nil, errors.New("public key not found for kid")
+					}
+				}
+
+				return key, nil
+			},
+			jwt.WithLeeway(1*time.Minute),
+		)
+		if err == nil && token.Valid {
+			return claims, nil
+		}
+
+	}
+
+	return nil, errors.New("invalid token")
 }
 
 // ================= HELPER =================
@@ -135,5 +174,15 @@ func (j *JWT) GetUserID(tokenString string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return uuid.Parse(claims.Sub)
+
+	switch c := claims.(type) {
+	case *GoogleClaims:
+		// Buat UUID yang konsisten dari sub Google
+		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), nil
+	case *GoogleTokenInfo:
+		// Buat UUID yang konsisten dari sub Google
+		return uuid.NewSHA1(uuid.Nil, []byte(c.Sub)), nil
+	default:
+		return uuid.Nil, errors.New("unsupported claims type")
+	}
 }

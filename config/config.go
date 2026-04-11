@@ -27,6 +27,9 @@ type Config struct {
 	SupabaseJWTSecret string // Dashboard → Settings → API → JWT Secret
 	SupabaseJWKSUrl string // GET https://project-id.supabase.co/auth/v1/.well-known/jwks.json
 
+	// Google Auth
+	GoogleJWKSUrl string // GET https://www.googleapis.com/oauth2/v3/certs
+
 	AllowedOrigin	string
 }
 
@@ -46,7 +49,8 @@ func Load() *Config {
 		MigrateDBPort:     	getEnv("MIGRATE_DB_PORT", "5432"),
 		SupabaseJWTSecret: 	getEnv("SUPABASE_JWT_SECRET", ""),
 		SupabaseJWKSUrl:   	getEnv("SUPABASE_JWKS_URL", ""),
-		AllowedOrigin:   	getEnv("ALLOWED_ORIGIN", ""),
+		GoogleJWKSUrl:     	getEnv("GOOGLE_JWKS_URL", "https://www.googleapis.com/oauth2/v3/certs"),
+		AllowedOrigin:    	getEnv("ALLOWED_ORIGIN", ""),
 	}
 }
 
