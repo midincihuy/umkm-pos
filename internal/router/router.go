@@ -17,6 +17,7 @@ type Handlers struct {
 	Budget         *handler.BudgetHandler
 	Reconciliation *handler.ReconciliationHandler
 	Report         *handler.ReportHandler
+	Spreadsheet    *handler.SpreadsheetHandler
 }
 
 func Setup(h Handlers, jwtHelper *jwt.JWT, allowedOrigin string) *gin.Engine {
@@ -94,6 +95,15 @@ func Setup(h Handlers, jwtHelper *jwt.JWT, allowedOrigin string) *gin.Engine {
 		api.GET("/reports/income-breakdown", h.Report.IncomeBreakdown)
 		api.GET("/reports/trend", h.Report.Trend)
 		api.GET("/reports/net-worth", h.Report.NetWorth)
+
+		// Spreadsheet
+		sheetGroup := api.Group("/spreadsheet")
+		{
+			sheetGroup.POST("/read", h.Spreadsheet.ReadData)
+			sheetGroup.POST("/write", h.Spreadsheet.WriteData)
+			sheetGroup.POST("/append", h.Spreadsheet.AppendData)
+			sheetGroup.POST("/update-cell", h.Spreadsheet.UpdateCell)
+		}
 	}
 
 	return r

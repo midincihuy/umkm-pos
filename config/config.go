@@ -30,6 +30,10 @@ type Config struct {
 	// Google Auth
 	GoogleJWKSUrl string // GET https://www.googleapis.com/oauth2/v3/certs
 
+	// Spreadsheet
+	SpreadsheetID string
+	ServiceAccountPath string
+
 	AllowedOrigin	string
 }
 
@@ -49,6 +53,8 @@ func Load() *Config {
 		MigrateDBPort:     	getEnv("MIGRATE_DB_PORT", "5432"),
 		SupabaseJWTSecret: 	getEnv("SUPABASE_JWT_SECRET", ""),
 		SupabaseJWKSUrl:   	getEnv("SUPABASE_JWKS_URL", ""),
+		SpreadsheetID:      getEnv("MASTER_SHEET_ID", ""),
+		ServiceAccountPath: getEnv("SERVICE_ACCOUNT_PATH", "service-account.json"),
 		GoogleJWKSUrl:     	getEnv("GOOGLE_JWKS_URL", "https://www.googleapis.com/oauth2/v3/certs"),
 		AllowedOrigin:    	getEnv("ALLOWED_ORIGIN", ""),
 	}

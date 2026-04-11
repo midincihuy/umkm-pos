@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"umkm-pos/config"
@@ -8,6 +9,7 @@ import (
 	"umkm-pos/internal/repository"
 	"umkm-pos/internal/router"
 	"umkm-pos/internal/service"
+	"umkm-pos/internal/spreadsheet"
 	"umkm-pos/pkg/jwt"
 )
 
@@ -21,7 +23,14 @@ func main() {
 	// 3. JWT helper — validasi token Google Auth
 	jwtHelper, err := jwt.NewJWT(cfg.GoogleJWKSUrl)
 
-	// 4. Wire: repo → service → handler
+	// 4. Initialize Spreadsheet Service
+	ctx := context.Background()
+	sheetService, err := spreadsheet.NewService(ctx, cfg.SpreadsheetID, cfg.ServiceAccountPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize spreadsheet service: %v", err)
+	}
+
+	// 5. Wire: repo → service → handler
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,8 +67,10 @@ func main() {
 	budgetHandler   := handler.NewBudgetHandler(budgetService)
 	reconHandler    := handler.NewReconHandler(reconService)
 	reportHandler   := handler.NewReportHandler(reportService)
+	// Spreadsheet handler
+	sheetHandler := handler.NewSpreadsheetHandler(sheetService)
 
-	// 5. Setup router & jalankan server
+	// 6. Setup router & jalankan server
 	r := router.Setup(router.Handlers{
 		Auth:           authHandler,
 		Account:        accountHandler,
@@ -70,6 +81,7 @@ func main() {
 		Budget:         budgetHandler,
 		Reconciliation: reconHandler,
 		Report:         reportHandler,
+		Spreadsheet:    sheetHandler,
 	}, jwtHelper, cfg.AllowedOrigin)
 
 	log.Printf("Server running on :%s (env: %s)", cfg.Port, cfg.Env)
