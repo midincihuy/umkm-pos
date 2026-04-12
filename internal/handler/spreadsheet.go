@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"umkm-pos/pkg/jwt"
@@ -175,4 +176,59 @@ func (h *SpreadsheetHandler) SaveUserSpreadsheet(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Spreadsheet ID berhasil disimpan", req)
+}
+// GetUserSpreadsheetID mendapatkan spreadsheet ID user yang tersimpan
+func (h *SpreadsheetHandler) GetUserSpreadsheetID(c *gin.Context) {
+	// Dapatkan user info dari context yang diset middleware auth
+	userID := getUserID(c)
+
+	// getUserID already returns uuid.UUID type, so just convert directly to string
+	userIDStr := userID.String()
+
+	// Baca data spreadsheet users
+	data, err := h.sheetService.ReadData(c.Request.Context(), "Users", "A:C")
+	if err != nil {
+		// Jika sheet kosong atau tidak ada data, kembalikan empty string
+		if err.Error() == "tidak ada data ditemukan di range: Users!A:C" {
+			response.Error(c, http.StatusNotFound, "Not Found", err.Error())
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "Gagal membaca data spreadsheet: ", err.Error())
+		return
+	}
+
+	// Cari spreadsheet ID untuk user ini
+	var spreadsheetID string
+	for _, row := range data {
+		if len(row) >= 3 {
+			// Konversi nilai dari spreadsheet ke string
+			var currentUserID string
+			switch cellVal := row[0].(type) {
+			case string:
+				currentUserID = cellVal
+			case []byte:
+				currentUserID = string(cellVal)
+			default:
+				currentUserID = fmt.Sprintf("%v", cellVal)
+			}
+
+			if currentUserID == userIDStr {
+				// Konversi nilai spreadsheet ID ke string
+				switch val := row[2].(type) {
+				case string:
+					spreadsheetID = val
+				case []byte:
+					spreadsheetID = string(val)
+				default:
+					spreadsheetID = fmt.Sprintf("%v", val)
+				}
+				break
+			}
+		}
+	}
+	if spreadsheetID == ""{
+		response.Error(c, http.StatusNotFound, "Spreadsheet ID Not Found", "")
+		return
+	}
+	response.Success(c, http.StatusOK, "OK", map[string]string{"spreadsheet_id": spreadsheetID, "url" : fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", spreadsheetID)})
 }
