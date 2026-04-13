@@ -143,10 +143,12 @@ func (h *SpreadsheetHandler) SaveUserSpreadsheet(c *gin.Context) {
 		return
 	}
 
-	if req.SpreadsheetID == "" {
-		response.Error(c, http.StatusBadRequest, "SpreadsheetID harus diisi", nil)
-		return
-	}
+	// spreadsheetID boleh kosong, untuk save ID dan email sebelum pick sheet, dan untuk remove sheet
+	
+	// if req.SpreadsheetID == "" {
+	// 	response.Error(c, http.StatusBadRequest, "SpreadsheetID harus diisi", nil)
+	// 	return
+	// }
 
 	// Dapatkan user info dari context yang diset middleware auth
 	userID := getUserID(c)
