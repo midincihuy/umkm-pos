@@ -177,7 +177,7 @@ func (h *SpreadsheetHandler) SaveUserSpreadsheet(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, "Spreadsheet ID berhasil disimpan", req)
+	response.Success(c, http.StatusOK, "Spreadsheet ID berhasil disimpan", map[string]string{"spreadsheet_id": req.SpreadsheetID, "url" : fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", req.SpreadsheetID)})
 }
 // GetUserSpreadsheetID mendapatkan spreadsheet ID user yang tersimpan
 func (h *SpreadsheetHandler) GetUserSpreadsheetID(c *gin.Context) {
@@ -229,7 +229,7 @@ func (h *SpreadsheetHandler) GetUserSpreadsheetID(c *gin.Context) {
 		}
 	}
 	if spreadsheetID == ""{
-		response.Error(c, http.StatusNotFound, "Spreadsheet ID Not Found", "")
+		response.Error(c, http.StatusOK, "Spreadsheet ID Not Found", "")
 		return
 	}
 	response.Success(c, http.StatusOK, "OK", map[string]string{"spreadsheet_id": spreadsheetID, "url" : fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", spreadsheetID)})
