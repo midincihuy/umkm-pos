@@ -16,3 +16,4 @@ vendor/
 tmp/
 
 .*.json
+.claude
