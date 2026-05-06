@@ -25,6 +25,10 @@ func Setup(h Handlers, jwtHelper *jwt.JWT, allowedOrigin string) *gin.Engine {
 	r.Use(middleware.CORSMiddleware(allowedOrigin))
 	r.Use(middleware.LoggerMiddleware())
 
+	// Serve static files from /dist
+	r.Static("/assets", "./dist/assets")
+	r.StaticFile("/", "./dist/index.html")
+
 	v1 := r.Group("/v1")
 
 	// Semua route protected — login/register dihandle Supabase Auth di frontend

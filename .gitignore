@@ -17,3 +17,5 @@ tmp/
 
 .*.json
 .claude
+
+dist/
